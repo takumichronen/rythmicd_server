@@ -1,0 +1,87 @@
+# Rythmicd Configuration File
+# Copy to config.yaml and modify as needed
+
+# =============================================================================
+# Miqrod RPC Connection
+# =============================================================================
+rpc:
+  host: "127.0.0.1"
+  port: 9834
+  # Authentication: use either username/password OR cookie_path
+  username: null
+  password: null
+  cookie_path: "~/.miqrochain/.cookie"
+  # Connection settings
+  timeout: 30.0
+  max_retries: 3
+  retry_delay: 1.0
+
+# =============================================================================
+# PostgreSQL Database
+# =============================================================================
+database:
+  host: "127.0.0.1"
+  port: 5432
+  database: "rythmicd"
+  username: "rythmicd"
+  password: "your_secure_password"
+  # Connection pool
+  min_connections: 5
+  max_connections: 20
+  command_timeout: 60.0
+
+# =============================================================================
+# Rythmium Protocol Server
+# =============================================================================
+rythmium:
+  host: "0.0.0.0"
+  port: 50001
+  # SSL/TLS (optional)
+  ssl_port: 50002
+  ssl_cert_path: "/etc/rythmicd/certs/server.crt"
+  ssl_key_path: "/etc/rythmicd/certs/server.key"
+  # Limits
+  max_connections: 1000
+  max_subscriptions_per_client: 10000
+  max_message_size: 1000000
+  client_timeout: 600.0
+  # Server info
+  banner: "Rythmicd - Miqrochain Rythmium Server"
+  donation_address: null
+  # Protocol version
+  protocol_min: "1.4"
+  protocol_max: "1.4.2"
+
+# =============================================================================
+# Blockchain Indexer
+# =============================================================================
+indexer:
+  # How often to check for new blocks (seconds)
+  poll_interval: 1.0
+  # How often to update mempool (seconds)
+  mempool_poll_interval: 5.0
+  # Blocks to process per batch during initial sync
+  batch_size: 100
+  # Blocks between database commits during sync
+  flush_interval: 1000
+  # Maximum reorg depth to handle
+  reorg_limit: 100
+
+# =============================================================================
+# Logging
+# =============================================================================
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  json_format: false  # Set to true for production JSON logs
+  # Module-specific log levels (optional)
+  module_levels:
+    rythmicd.rpc: "WARNING"
+    rythmicd.protocol: "INFO"
+    asyncpg: "WARNING"
+
+# =============================================================================
+# Chain Configuration
+# =============================================================================
+chain_name: "miqrochain"
+network: "mainnet"  # mainnet, testnet, regtest
+address_version: 0x35  # P2PKH version byte
