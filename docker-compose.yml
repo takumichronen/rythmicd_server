@@ -1,0 +1,106 @@
+# Rythmicd Docker Compose Configuration
+#
+# This compose file sets up:
+# - PostgreSQL database for blockchain index
+# - Rythmicd Rythmium-compatible server
+#
+# Note: miqrod must be running separately (either locally or in another container)
+# and accessible via RPC.
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f rythmicd
+#   docker compose down
+
+version: "3.8"
+
+services:
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: rythmicd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rythmicd
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rythmicd_secret}
+      POSTGRES_DB: rythmicd
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rythmicd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # Rythmicd Rythmium Server
+  # ==========================================================================
+  rythmicd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rythmicd
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # RPC Connection to miqrod
+      # By default, connects to host machine's miqrod
+      RYTHMICD_RPC_HOST: ${MIQROD_HOST:-host.docker.internal}
+      RYTHMICD_RPC_PORT: ${MIQROD_RPC_PORT:-9834}
+      RYTHMICD_RPC_USERNAME: ${MIQROD_RPC_USER:-}
+      RYTHMICD_RPC_PASSWORD: ${MIQROD_RPC_PASS:-}
+      RYTHMICD_RPC_COOKIE_PATH: ${MIQROD_RPC_COOKIE:-}
+
+      # Database
+      RYTHMICD_DB_HOST: postgres
+      RYTHMICD_DB_PORT: 5432
+      RYTHMICD_DB_NAME: rythmicd
+      RYTHMICD_DB_USERNAME: rythmicd
+      RYTHMICD_DB_PASSWORD: ${POSTGRES_PASSWORD:-rythmicd_secret}
+
+      # Rythmium Server
+      RYTHMICD_RYTHMIUM_HOST: 0.0.0.0
+      RYTHMICD_RYTHMIUM_PORT: 50001
+      RYTHMICD_RYTHMIUM_BANNER: "Rythmicd - Miqrochain Rythmium Server"
+
+      # Indexer
+      RYTHMICD_INDEXER_POLL_INTERVAL: 1.0
+      RYTHMICD_INDEXER_MEMPOOL_INTERVAL: 5.0
+      RYTHMICD_INDEXER_BATCH_SIZE: 100
+
+      # Logging
+      RYTHMICD_LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      RYTHMICD_LOG_JSON: ${LOG_JSON:-false}
+    ports:
+      # Rythmium TCP (unencrypted)
+      - "${RYTHMIUM_TCP_PORT:-50001}:50001"
+      # Rythmium SSL (if configured)
+      - "${RYTHMIUM_SSL_PORT:-50002}:50002"
+    volumes:
+      # Optional: mount config file
+      - ./config.yaml:/etc/rythmicd/config.yaml:ro
+      # Optional: mount SSL certificates
+      - ./certs:/etc/rythmicd/certs:ro
+    extra_hosts:
+      # Allow connecting to miqrod on host machine
+      - "host.docker.internal:host-gateway"
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  postgres_data:
+    driver: local
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  default:
+    name: rythmicd-network
